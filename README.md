@@ -1,6 +1,6 @@
 # Advent of Code 2022
 
-My attempt at solving (2022 Advent of Code)[https://adventofcode.com/2022] in Nim.
+My attempt at solving [2022 Advent of Code](https://adventofcode.com/2022) in Nim.
 
 ## Usage
 
