@@ -1,9 +1,11 @@
 import tables
 
 import day1/day1
+import day2/day2
 
 const FUNCTION_TABLE = {
   "day1p1": day1p1, "day1p2": day1p2,
+  "day2p1": day2p1, "day2p2": day2p2,
 }.toTable()
 
 when defined(js):
