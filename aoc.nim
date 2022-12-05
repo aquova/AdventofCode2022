@@ -4,12 +4,14 @@ import day1/day1
 import day2/day2
 import day3/day3
 import day4/day4
+import day5/day5
 
 const FUNCTION_TABLE = {
   "day1p1": day1p1, "day1p2": day1p2,
   "day2p1": day2p1, "day2p2": day2p2,
   "day3p1": day3p1, "day3p2": day3p2,
   "day4p1": day4p1, "day4p2": day4p2,
+  "day5p1": day5p1, "day5p2": day5p2,
 }.toTable()
 
 when defined(js):
