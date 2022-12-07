@@ -21,8 +21,8 @@ proc newInode(name: string, parent: inode): inode =
 proc addChild(node: inode, child: inode) =
     node.children.add(child)
 
-proc addFile(node: inode, filesize: int) =
-    var file = newInode("", node)
+proc addFile(node: inode, filename: string, filesize: int) =
+    var file = newInode(filename, node)
     file.size = filesize
     node.addChild(file)
 
@@ -75,7 +75,7 @@ proc generateTree(input: string): inode =
         let is_back = line.scanTuple("$$ cd ..")
         let is_ls = line.scanTuple("$$ ls")
         let (is_node, child) = line.scanTuple("dir $w")
-        let (is_file, filesize, _) = line.scanTuple("$i $*")
+        let (is_file, filesize, filename) = line.scanTuple("$i $*")
 
         if is_root:
             # We already handled the root node
@@ -91,7 +91,7 @@ proc generateTree(input: string): inode =
             var childDir = newInode(child, current_node)
             current_node.addChild(childDir)
         elif is_file:
-            current_node.addFile(filesize)
+            current_node.addFile(filename, filesize)
         else:
             assert(false, &"Invalid line type: {line}")
 
