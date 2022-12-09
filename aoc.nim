@@ -8,6 +8,7 @@ import day5/day5
 import day6/day6
 import day7/day7
 import day8/day8
+import day9/day9
 
 const FUNCTION_TABLE = {
   "day1p1": day1p1, "day1p2": day1p2,
@@ -18,6 +19,7 @@ const FUNCTION_TABLE = {
   "day6p1": day6p1, "day6p2": day6p2,
   "day7p1": day7p1, "day7p2": day7p2,
   "day8p1": day8p1, "day8p2": day8p2,
+  "day9p1": day9p1, "day9p2": day9p2,
 }.toTable()
 
 when defined(js):
