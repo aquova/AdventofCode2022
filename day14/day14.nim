@@ -1,17 +1,11 @@
 import sets
 import strscans
 import strutils
+import ../utils/point
 
-type Point = tuple
-    x, y: int
+const SOURCE: Point[int] = (500, 0)
 
-const SOURCE: Point = (500, 0)
-
-proc new_point(x, y: int): Point =
-    result.x = x
-    result.y = y
-
-proc new_point(raw: string): Point =
+proc new_point(raw: string): Point[int] =
     let (success, x, y) = raw.scanTuple("$i,$i")
     if success:
         result = new_point(x, y)
@@ -30,7 +24,7 @@ proc draw_line(p1: Point, p2: Point): seq[Point] =
         for y in countup(p2.y, p1.y):
             result.add(new_point(p1.x, y))
 
-proc parse_rock(input: string): HashSet[Point] =
+proc parse_rock(input: string): HashSet[Point[int]] =
     for line in input.splitLines():
         let vectors = line.split(" -> ")
         for idx in 0..<(vectors.len() - 1):
@@ -40,12 +34,12 @@ proc parse_rock(input: string): HashSet[Point] =
             var line_set = line.toHashSet()
             result.incl(line_set)
 
-proc abyss_level(rocks: HashSet[Point]): int =
+proc abyss_level(rocks: HashSet[Point[int]]): int =
     result = 0
     for rock in rocks:
         result = max(result, rock.y)
 
-proc drop_sand(rock: var HashSet[Point], abyss: int, floor: bool): bool =
+proc drop_sand(rock: var HashSet[Point[int]], abyss: int, floor: bool): bool =
     var sand = SOURCE
     while sand.y < abyss or floor:
         if floor and sand.y == abyss:

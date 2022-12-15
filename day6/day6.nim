@@ -17,7 +17,3 @@ proc day6p1*(input: string): string =
 
 proc day6p2*(input: string): string =
     return $search(input, 14)
-
-when isMainModule:
-    import os
-    echo(day6p1(paramStr(1)))

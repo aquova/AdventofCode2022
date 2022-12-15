@@ -1,10 +1,9 @@
 from strutils import splitLines
 import deques
 import tables
+import ../utils/point
 
 type Grid = seq[seq[int]]
-type Point = tuple
-    x, y: int
 
 proc `[]`(map: Grid, p: Point): int =
     return map[p.y][p.x]
@@ -37,13 +36,6 @@ proc parseMap(input: string, start: var Point, dst: var Point): Grid =
                     row.add(ord(height) - ord('a'))
         result.add(row)
 
-iterator neighbors(p: Point): Point =
-    # So much for a fancy iterator...
-    yield (p.x - 1, p.y)
-    yield (p.x + 1, p.y)
-    yield (p.x, p.y - 1)
-    yield (p.x, p.y + 1)
-
 proc bfs(map: Grid, start: Point, targets: seq[Point], going_up: bool): seq[Point] =
     var
         queue: Deque[Point]
@@ -69,15 +61,15 @@ proc bfs(map: Grid, start: Point, targets: seq[Point], going_up: bool): seq[Poin
 
 proc day12p1*(input: string): string =
     var
-        start, target: Point
+        start, target: Point[int]
     let map = parseMap(input, start, target)
     let path = bfs(map, start, @[target], true)
     return $path.len()
 
 proc day12p2*(input: string): string =
     var
-        start, target: Point
-        targets: seq[Point]
+        start, target: Point[int]
+        targets: seq[Point[int]]
     let map = parseMap(input, start, target)
 
     for y in 0..<map.len():

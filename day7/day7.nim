@@ -106,13 +106,3 @@ proc day7p2*(input: string): string =
     let tree = generateTree(input)
     let unused = TOTAL_SPACE - tree.size
     return $tree.findSmallestToDelete(NEEDED_SPACE - unused)
-
-when isMainModule:
-    from strutils import stripLineEnd
-
-    var f: File
-    discard f.open("input.txt", FileMode.fmRead)
-    var input = f.readAll()
-    input.stripLineEnd()
-    echo(day7p2(input))
-
