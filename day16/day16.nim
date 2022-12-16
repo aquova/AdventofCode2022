@@ -1,7 +1,9 @@
 import deques
+import sequtils
 import strscans
 import strutils
 import tables
+import ../utils/misc
 
 const STARTING = "AA"
 const TIME_LIMIT = 30
@@ -9,19 +11,16 @@ const TIME_LIMIT = 30
 type Valve = ref object
     flow_rate: int
     tunnels: seq[string]
-    turned: bool
 
 type ValveInfo = Table[string, Valve]
+type ValveGraph = Table[string, Table[string, seq[string]]]
 
 proc newValve(rate: int, tunnels: seq[string]): Valve =
     result = new(Valve)
     result.flow_rate = rate
     result.tunnels = tunnels
-    result.turned = false
 
 proc calcTotalVent(v: Valve, remaining_t: int): int =
-    if v.turned:
-        return 0
     return v.flow_rate * remaining_t
 
 proc isUseless(v: Valve): bool =
@@ -29,9 +28,6 @@ proc isUseless(v: Valve): bool =
 
 proc getNeighbors(v: Valve): seq[string] =
     return v.tunnels
-
-proc setTurned(v: var Valve) =
-    v.turned = true
 
 proc bfs(start: string, target: string, info: ValveInfo): seq[string] =
     var
@@ -54,48 +50,49 @@ proc bfs(start: string, target: string, info: ValveInfo): seq[string] =
     while backtrack != start:
         result.add(backtrack)
         backtrack = parents[backtrack]
+    result = result.rev()
 
-proc findBestNeighbor(v: string, info: ValveInfo, remaining_t: int): string =
-    var graph_table: Table[string, seq[string]]
-    for k in info.keys():
-        graph_table[k] = bfs(v, k, info)
+proc genFullGraph(valves: ValveInfo): ValveGraph =
+    let nodes = valves.keys().toSeq()
+    for node in nodes:
+        var current_table: Table[string, seq[string]]
+        for other in nodes:
+            if node == other or valves[other].isUseless():
+                continue
+            let paths = bfs(node, other, valves)
+            current_table[other] = paths
+        result[node] = current_table
 
-    var best = 0
-    var best_node: string
-    for k, v in info:
-        if not v.isUseless():
-            let num_moves = graph_table[k].len()
-            let time_left = remaining_t - num_moves - 1
-            if time_left > 0:
-                let steam = v.calcTotalVent(time_left)
-                if steam > best:
-                    best = steam
-                    best_node = k
-    return best_node
+proc checkPaths(start, stop: string, start_t: int, graph: ValveGraph, info: ValveInfo, opened: seq[string]): int =
+    let remaining_t = start_t - graph[start][stop].len() - 1
+    if remaining_t < 0:
+        return 0
+    let our_steam = info[stop].calcTotalVent(remaining_t)
+    let new_opened = opened & @[stop]
+    var later_steam = 0
+    for other in graph[stop].keys():
+        if other notin opened:
+            let path_steam = checkPaths(stop, other, remaining_t, graph, info, new_opened)
+            later_steam = max(later_steam, path_steam)
+    return our_steam + later_steam
 
-proc day16p1*(input: string): string =
-    var valves: ValveInfo
+proc parseInput(input: string): ValveInfo =
     for line in input.splitLines():
         let (success, name, rate, neighbors) = line.scanTuple("Valve $w has flow rate=$i; tunnels lead to valves $*$.")
         if success:
             let neighbor_list = neighbors.split(", ")
-            valves[name] = newValve(rate, neighbor_list)
+            result[name] = newValve(rate, neighbor_list)
         else:
             let (_, name, rate, neighbor) = line.scanTuple("Valve $w has flow rate=$i; tunnel leads to valve $*$.")
-            valves[name] = newValve(rate, @[neighbor])
+            result[name] = newValve(rate, @[neighbor])
 
-    var pos = STARTING
-    var time_remaining = TIME_LIMIT
+proc day16p1*(input: string): string =
+    var valves = parseInput(input)
+    let graph = valves.genFullGraph()
     var vented = 0
-    while time_remaining > 0:
-        let best = pos.findBestNeighbor(valves, time_remaining)
-        if best == "":
-            break
-        let path = bfs(pos, best, valves)
-        time_remaining -= path.len() + 1
-        valves[best].setTurned()
-        vented += valves[best].calcTotalVent(time_remaining)
-
+    for other in graph[STARTING].keys():
+        let total = checkPaths(STARTING, other, TIME_LIMIT, graph, valves, @[])
+        vented = max(total, vented)
     return $vented
 
 proc day16p2*(input: string): string =
