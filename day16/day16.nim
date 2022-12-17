@@ -1,13 +1,9 @@
 import deques
-import strformat
 import sequtils
 import strscans
 import strutils
 import tables
 import ../utils/misc
-
-import threadpool
-{.experimental.}
 
 const STARTING = "AA"
 const TIME_LIMIT_P1 = 30
@@ -167,16 +163,20 @@ proc day16p2*(input: string): string =
     let graph = valves.genFullGraph()
     let targets = valves.getTargets()
     var vents = newSeq[int](targets.len() * targets.len())
-    parallel:
-        for i, next_human in targets.pairs():
-            for j, next_elephant in targets.pairs():
-                if next_human != next_elephant:
-                    let total = spawn checkPathsTwoPlayer(STARTING, next_human, STARTING, next_elephant, TIME_LIMIT_P2, graph, valves, targets)
-                    echo(i * targets.len() + j)
-                    vents[i * targets.len() + j] = total
+    # parallel:
+    for i, next_human in targets.pairs():
+        for j, next_elephant in targets.pairs():
+            if next_human != next_elephant:
+                # let total = spawn checkPathsTwoPlayer(STARTING, next_human, STARTING, next_elephant, TIME_LIMIT_P2, graph, valves, targets)
+                let total = checkPathsTwoPlayer(STARTING, next_human, STARTING, next_elephant, TIME_LIMIT_P2, graph, valves, targets)
+                echo(i * targets.len() + j)
+                vents[i * targets.len() + j] = total
     return $max(vents)
 
 when isMainModule:
+    # import threadpool
+    # {.experimental.}
+
     var f: File
     discard f.open("input.txt", FileMode.fmRead)
     var input = f.readAll()
