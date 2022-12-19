@@ -1,5 +1,8 @@
+from algorithm import reversed
 import deques
+import math
 import sequtils
+import strformat
 import strscans
 import strutils
 import tables
@@ -51,7 +54,7 @@ proc bfs(start: string, target: string, info: ValveInfo): seq[string] =
     while backtrack != start:
         result.add(backtrack)
         backtrack = parents[backtrack]
-    result = result.rev()
+    result = result.reversed()
 
 proc genFullGraph(valves: ValveInfo): ValveGraph =
     let nodes = valves.keys().toSeq()
@@ -83,60 +86,15 @@ proc checkPaths(start, stop: string, start_t: int, graph: ValveGraph, info: Valv
         later_steam = max(later_steam, path_steam)
     return our_steam + later_steam
 
-proc checkPathsTwoPlayer(start_human, stop_human, start_elephant, stop_elephant: string, start_t: int, graph: ValveGraph, info: ValveInfo, targets: seq[string]): int =
-    let human_path = graph[start_human][stop_human]
-    let elephant_path = graph[start_elephant][stop_elephant]
-
-    # Figure out how long until someone opens a valve
-    let human_cycles = if start_human == stop_human: 1 else: human_path.len() + 1
-    let elephant_cycles = if start_elephant == stop_elephant: 1 else: elephant_path.len() + 1
-    let stopping_cycles = min(human_cycles, elephant_cycles)
-    let remaining_t = start_t - stopping_cycles
-    if remaining_t < 0:
-        return 0
-
-    let human_offset = human_cycles - stopping_cycles
-    let elephant_offset = elephant_cycles - stopping_cycles
-    let human_arrived = human_offset == 0
-    let elephant_arrived = elephant_offset == 0
-
-    # For whoever reached their goal, remove from targets, sum up steam total
-    var new_opened: seq[string]
-    var our_steam = 0
-    if human_arrived:
-        new_opened.add(stop_human)
-        our_steam += info[stop_human].calcTotalVent(remaining_t)
-
-    if elephant_arrived:
-        new_opened.add(stop_elephant)
-        our_steam += info[stop_elephant].calcTotalVent(remaining_t)
-
-    # If everything has been opened, we're done
-    let unopened = targets - new_opened
-    if unopened.len() == 0:
-        return our_steam
-
-    # Send whoever arrived to new targets. If one was on their way, don't redirect them
-    var later_steam = 0
-    if human_arrived and elephant_arrived:
-        for next_human in unopened:
-            for next_elephant in unopened:
-                if next_human != next_elephant:
-                    let path_steam = checkPathsTwoPlayer(stop_human, next_human, stop_elephant, next_elephant, remaining_t, graph, info, unopened)
-                    later_steam = max(path_steam, later_steam)
-    elif elephant_arrived:
-        let curr_human = human_path[^human_offset]
-        for next_elephant in unopened:
-            if next_elephant != stop_human or unopened.len() == 1:
-                let path_steam = checkPathsTwoPlayer(curr_human, stop_human, stop_elephant, next_elephant, remaining_t, graph, info, unopened)
-                later_steam = max(path_steam, later_steam)
-    elif human_arrived:
-        let curr_elephant = elephant_path[^elephant_offset]
-        for next_human in unopened:
-            if next_human != stop_elephant or unopened.len() == 1:
-                let path_steam = checkPathsTwoPlayer(stop_human, next_human, curr_elephant, stop_elephant, remaining_t, graph, info, unopened)
-                later_steam = max(later_steam, path_steam)
-    return our_steam + later_steam
+proc getSubsets(s: seq[string]): seq[seq[string]] =
+    let num_subsets = 2 ^ s.len()
+    for mask in 0..<num_subsets:
+        var subset: seq[string]
+        for i in 0..<s.len():
+            if (mask and (1 shl i)) != 0:
+                subset.add(s[i])
+        if s - subset notin result:
+            result.add(subset)
 
 proc parseInput(input: string): ValveInfo =
     for line in input.splitLines():
@@ -162,23 +120,22 @@ proc day16p2*(input: string): string =
     var valves = parseInput(input)
     let graph = valves.genFullGraph()
     let targets = valves.getTargets()
-    var vents = newSeq[int](targets.len() * targets.len())
-    # parallel:
-    for i, next_human in targets.pairs():
-        for j, next_elephant in targets.pairs():
-            if next_human != next_elephant:
-                # let total = spawn checkPathsTwoPlayer(STARTING, next_human, STARTING, next_elephant, TIME_LIMIT_P2, graph, valves, targets)
-                let total = checkPathsTwoPlayer(STARTING, next_human, STARTING, next_elephant, TIME_LIMIT_P2, graph, valves, targets)
-                echo(i * targets.len() + j)
-                vents[i * targets.len() + j] = total
-    return $max(vents)
+    let subsets = targets.getSubsets()
+    echo(subsets.len())
+    var best = 0
+    var cnt = 0
+    for subset in subsets:
+        # Human & elephant should roughly do the same work. Skip instances where it's really unbalanced
+        if subset.len() < int(0.3 * float(targets.len())) or subset.len() > int(0.7 * float(targets.len())):
+            continue
+        echo(&"Trying number: {cnt}")
+        let elephant_targets = targets - subset
+        var best_human, best_elephant = 0
+        for other in subset:
+            best_human = max(best_human, checkPaths(STARTING, other, TIME_LIMIT_P2, graph, valves, subset))
+        for other in elephant_targets:
+            best_elephant =max(best_elephant, checkPaths(STARTING, other, TIME_LIMIT_P2, graph, valves, elephant_targets))
+        best = max(best_human + best_elephant, best)
+        inc(cnt)
+    return $best
 
-when isMainModule:
-    # import threadpool
-    # {.experimental.}
-
-    var f: File
-    discard f.open("input.txt", FileMode.fmRead)
-    var input = f.readAll()
-    input.stripLineEnd()
-    echo(day16p2(input))
