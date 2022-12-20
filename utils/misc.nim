@@ -1,3 +1,8 @@
+proc find*[T](list: seq[T], v: T): T =
+    for idx, item in list.pairs():
+        if item == v:
+            return idx
+
 proc sign*(v: int): int =
     if v > 0:
         return 1
