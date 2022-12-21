@@ -2,6 +2,8 @@ import strscans
 import strutils
 import tables
 
+const HUMAN_NAME = "humn"
+
 type Monkey = object
     constant: int
     left, right: string
@@ -25,9 +27,12 @@ proc parseMonkeys(input: string): MonkeyTable =
             monkeys[name] = m
     return monkeys
 
+proc isConst(m: Monkey): bool =
+    return m.left == ""
+
 proc yell(yeller: string, monkeys: MonkeyTable): int =
     let info = monkeys[yeller]
-    if info.left == "":
+    if info.isConst():
         return info.constant
     let left = yell(info.left, monkeys)
     let right = yell(info.right, monkeys)
@@ -44,15 +49,15 @@ proc yell(yeller: string, monkeys: MonkeyTable): int =
             discard
 
 proc containsHumn(name: string, monkeys: MonkeyTable): bool =
-    if name == "humn":
+    if name == HUMAN_NAME:
         return true
     let node = monkeys[name]
-    if node.left == "":
+    if node.isConst():
         return false
     return node.left.containsHumn(monkeys) or node.right.containsHumn(monkeys)
 
 proc backtrack(name: string, monkeys: MonkeyTable, prev: int): int =
-    if name == "humn":
+    if name == HUMAN_NAME:
         return prev
     let node = monkeys[name]
     let humn_right = node.right.containsHumn(monkeys)
@@ -62,18 +67,22 @@ proc backtrack(name: string, monkeys: MonkeyTable, prev: int): int =
             if humn_right:
                 target = prev - node.left.yell(monkeys)
             else:
-                target = node.right.yell(monkeys) - prev
+                target = prev - node.right.yell(monkeys)
         of '-':
-            let opposite = if humn_right: node.left.yell(monkeys) else: node.right.yell(monkeys)
-            target = prev + opposite
+            if humn_right:
+                target = node.left.yell(monkeys) - prev
+            else:
+                target = prev + node.right.yell(monkeys)
         of '*':
             if humn_right:
                 target = prev div node.left.yell(monkeys)
             else:
-                target = node.right.yell(monkeys) div prev
+                target = prev div node.right.yell(monkeys)
         of '/':
-            let opposite = if humn_right: node.left.yell(monkeys) else: node.right.yell(monkeys)
-            target = prev * opposite
+            if humn_right:
+                target = node.left.yell(monkeys) div prev
+            else:
+                target = node.right.yell(monkeys) * prev
         else: discard
     if humn_right:
         return node.right.backtrack(monkeys, target)
@@ -91,4 +100,3 @@ proc day21p2*(input: string): string =
         return $root.right.backtrack(monkeys, target)
     let target = root.right.yell(monkeys)
     return $root.left.backtrack(monkeys, target)
-
