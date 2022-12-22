@@ -2,18 +2,12 @@ import strutils
 import tables
 import ../utils/point
 
-# Note: This needs to be 4 if you're doing a test input
-# const CHUNK_SIZE = 50
-const CHUNK_SIZE = 4
+const CHUNK_SIZE = 50
 
 type Chunks = Table[Point[int], seq[string]]
 
 type Direction = enum
     East, South, West, North
-
-const DP = {
-    North: (0, -1), South: (0, 1), East: (1, 0), West: (-1, 0)
-}.toTable
 
 type Player = object
     chunk: Point[int]
@@ -23,6 +17,35 @@ type Player = object
 type Instructions = object
     distances: seq[int]
     turns: seq[bool]
+
+type FaceData = tuple
+    destination: Point[int]
+    dir: Direction
+
+const DP = {
+    North: (0, -1), South: (0, 1), East: (1, 0), West: (-1, 0)
+}.toTable
+
+const CUBE_TBL: Table[Point[int], Table[Direction, FaceData]] = {
+    (1, 0): {
+        North: ((0, 3), East), South: ((1, 1), South), East: ((2, 0), East), West: ((0, 2), East)
+    }.toTable,
+    (1, 1): {
+        North: ((1, 0), North), South: ((1, 2), South), East: ((2, 0), North), West: ((0, 2), South)
+    }.toTable,
+    (1, 2): {
+        North: ((1, 1), North), South: ((0, 3), West), East: ((2, 0), West), West: ((0, 2), West)
+    }.toTable,
+    (0, 2): {
+        North: ((1, 1), East), South: ((0, 3), South), East: ((1, 2), East), West: ((1, 0), East)
+    }.toTable,
+    (0, 3): {
+        North: ((0, 2), North), South: ((2, 0), South), East: ((1, 2), North), West: ((1, 0), South)
+    }.toTable,
+    (2, 0): {
+        North: ((0, 3), North), South: ((1, 1), West), East: ((1, 2), West), West: ((1, 0), West)
+    }.toTable
+}.toTable
 
 proc `%`(a, b: int): int =
     var m = a mod b
@@ -45,10 +68,21 @@ proc newPlayer(chunks: Chunks): Player =
     while true:
         if starting in chunks:
             break
-        inc(starting.y)
+        inc(starting.x)
     result.chunk = starting
     result.pos = (0, 0)
     result.dir = Direction.East
+
+proc turn(dir: Direction, clockwise: bool): Direction =
+    result = case dir:
+        of North:
+            if clockwise: East else: West
+        of South:
+            if clockwise: West else: East
+        of West:
+            if clockwise: North else: South
+        of East:
+            if clockwise: South else: North
 
 proc move(p: var Player, chunks: Chunks, dist: int) =
     let map_size = chunks.getDim()
@@ -87,16 +121,40 @@ proc move(p: var Player, chunks: Chunks, dist: int) =
         else:
             break
 
-proc turn(p: var Player, clockwise: bool) =
-    p.dir = case p.dir:
-        of North:
-            if clockwise: East else: West
-        of South:
-            if clockwise: West else: East
-        of West:
-            if clockwise: North else: South
-        of East:
-            if clockwise: South else: North
+proc rot(p: Point[int], dd: int): Point[int] =
+    case dd:
+        of -1, 3: # CW
+            return ((CHUNK_SIZE - p.y - 1) % CHUNK_SIZE, p.x % CHUNK_SIZE)
+        of 0:
+            return (p.x % CHUNK_SIZE, p.y % CHUNK_SIZE)
+        of 1, -3: # CCW
+            return (p.y % CHUNK_SIZE, (CHUNK_SIZE - p.x - 1) % CHUNK_SIZE)
+        of 2, -2: # 180
+            return ((CHUNK_SIZE - p.x - 1) % CHUNK_SIZE, (CHUNK_SIZE - p.y - 1) % CHUNK_SIZE)
+        else:
+            assert(false, $dd)
+
+# Sadly, just hardcode it.
+proc moveCube(p: var Player, chunks: Chunks, dist: int) =
+    for _ in countup(1, dist):
+        # echo(p)
+        let dp = DP[p.dir]
+        var next_pos = p.pos + dp
+        var next_chunk = p.chunk
+        var next_dir = p.dir
+        if next_pos.x < 0 or next_pos.x == CHUNK_SIZE or next_pos.y < 0 or next_pos.y == CHUNK_SIZE:
+            let data = CUBE_TBL[p.chunk][p.dir]
+            next_chunk = data.destination
+            next_dir = data.dir
+            next_pos = next_pos.rot(ord(p.dir) - ord(next_dir))
+
+        if chunks[next_chunk][next_pos] == '.':
+            p.chunk = next_chunk
+            p.pos = next_pos
+            p.dir = next_dir
+        else:
+            # echo("Hit")
+            break
 
 proc parseChunks(input: string): Chunks =
     let lines = input.splitLines()
@@ -147,7 +205,7 @@ proc day22p1*(input: string): string =
             player.move(chunks, instructions.distances[idx])
             done = false
         if idx < instructions.turns.len():
-            player.turn(instructions.turns[idx])
+            player.dir = player.dir.turn(instructions.turns[idx])
             done = false
         inc(idx)
         if done:
@@ -157,4 +215,23 @@ proc day22p1*(input: string): string =
     return $(row * 1000 + 4 * col + ord(player.dir))
 
 proc day22p2*(input: string): string =
-    discard
+    let sections = input.split("\n\n")
+    let chunks = sections[0].parseChunks()
+    let instructions = sections[1].parseInstructions()
+    var player = newPlayer(chunks)
+    var idx = 0
+    while true:
+        var done = true
+        if idx < instructions.distances.len():
+            player.moveCube(chunks, instructions.distances[idx])
+            done = false
+        if idx < instructions.turns.len():
+            player.dir = player.dir.turn(instructions.turns[idx])
+            done = false
+        inc(idx)
+        if done:
+            break
+    let row = player.chunk.y * CHUNK_SIZE + player.pos.y + 1
+    let col = player.chunk.x * CHUNK_SIZE + player.pos.x + 1
+    return $(row * 1000 + 4 * col + ord(player.dir))
+
