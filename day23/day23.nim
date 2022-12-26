@@ -41,14 +41,6 @@ proc findArea(elves: seq[Elf]): int =
     let rect = elves.findRect()
     return (rect[3] - rect[1] + 1) * (rect[2] - rect[0] + 1)
 
-proc `$`(elves: seq[Elf]): string =
-    let positions = elves.getPositions()
-    let rect = elves.findRect()
-    for y in countup(rect[1], rect[3]):
-        for x in countup(rect[0], rect[2]):
-            result.add(if (x, y) in positions: '#' else: '.')
-        result.add("\n")
-
 proc hasNeighbor(elf: Elf, elves: seq[Point[int]]): bool =
     var has_neighbor = false
     for dx in countup(-1, 1):

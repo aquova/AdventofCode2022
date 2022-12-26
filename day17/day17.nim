@@ -41,15 +41,6 @@ const SQUARE_PIECE = [
 
 const PIECES = [HORZ_PIECE, PLUS_PIECE, L_PIECE, VERT_PIECE, SQUARE_PIECE]
 
-proc `$`(b: Board): string =
-    for i in countdown(b.len() - 1, 0):
-        let layer = b[i]
-        var mask = 0b0100_0000'u8
-        while mask != 0:
-            result.add(if (mask and layer) != 0: "#" else: ".")
-            mask = mask shr 1
-        result.add("\n")
-
 proc can_shift(piece: Piece, shift_right: bool): bool =
     let mask = if shift_right: 0b0000_0001'u8 else: 0b0100_0000'u8
     for layer in piece:
