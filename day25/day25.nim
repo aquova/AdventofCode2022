@@ -31,6 +31,3 @@ proc day25p1*(input: string): string =
     for line in input.splitLines():
         sum += snafu2int(line)
     return int2snafu(sum)
-
-proc day25p2*(input: string): string =
-    discard

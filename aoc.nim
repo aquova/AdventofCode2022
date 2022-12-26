@@ -53,7 +53,7 @@ const FUNCTION_TABLE = {
   "day22p1": DayProc(day22p1), "day22p2": DayProc(day22p2),
   "day23p1": DayProc(day23p1), "day23p2": DayProc(day23p2),
   "day24p1": DayProc(day24p1), "day24p2": DayProc(day24p2),
-  "day25p1": DayProc(day25p1), "day25p2": DayProc(day25p2),
+  "day25p1": DayProc(day25p1)
 }.toTable()
 
 when defined(js):
